@@ -1,43 +1,48 @@
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+import dotenv from "dotenv";
+import Task from "./models/Task.js"
 
+dotenv.config();
 const app = express();
+
 app.use(express.json());
+app.use(cors());
 
-// ✅ Fix CORS Issue
-// app.use(
-//   cors({
-//     origin: "https://vercel-frontend-smoky.vercel.app", // Replace with your frontend URL
-//     methods: ["GET", "POST", "PUT", "DELETE"],
-//     allowedHeaders: ["Content-Type"],
-//     credentials: true,
-//   })
-// );
 
-// ✅ Additional Middleware to Fix CORS
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://vercel-frontend-smoky.vercel.app");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  next();
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => console.log("MongoDB Connected mogog"))
+  .catch(err => console.error(err));
+
+  app.get ("/", async (req,res) => {
+    res.send("HUM BACKEND KI TARAF SE HAI aap ? ")
+  })
+
+
+app.get("/tasks", async (req, res) => {
+  try {
+    const tasks = await Task.find();
+    res.json(Array.isArray(tasks) ? tasks : []); // Ensure array response
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch tasks" });
+  }
 });
 
-// ✅ Verify Backend is Running
-app.get("/", (req, res) => {
-  res.send("API is running...");
+
+app.post("/tasks", async (req, res) => {
+  const { text } = req.body;
+  const newTask = new Task({ text });
+  await newTask.save();
+  res.json(newTask);
 });
 
-// ✅ Connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.error("MongoDB Connection Error:", err));
+app.delete("/tasks/:id", async (req, res) => {
+  await Task.findByIdAndDelete(req.params.id);
+  res.json({ message: "Task deleted" });
+});
 
-// ✅ Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-module.exports = app;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
